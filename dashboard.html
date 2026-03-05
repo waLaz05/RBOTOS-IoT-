@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CYBER-ESPY | Command Center</title>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
+    <style>
+        :root {
+            --neon-green: #00ff41;
+            --neon-blue: #00d4ff;
+            --dark-bg: #050505;
+            --glass: rgba(255, 255, 255, 0.05);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--dark-bg);
+            color: #fff;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Ambient background */
+        body::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 50%, #00ff4122 0%, transparent 70%);
+            z-index: -1;
+        }
+
+        .container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            gap: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        .panel {
+            background: var(--glass);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+        }
+
+        h2 {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--neon-green);
+            margin-top: 0;
+            border-bottom: 1px solid rgba(0, 255, 65, 0.3);
+            padding-bottom: 10px;
+        }
+
+        /* Sidebar Stats */
+        .stat-item {
+            margin-bottom: 15px;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: #aaa;
+        }
+
+        .stat-value {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--neon-blue);
+            text-shadow: 0 0 10px var(--neon-blue);
+        }
+
+        /* Main Chat Area */
+        .chat-main {
+            grid-column: 2;
+            position: relative;
+        }
+
+        #chat-logs {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            padding-right: 10px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            border-radius: 10px;
+            max-width: 80%;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .msg-user {
+            align-self: flex-end;
+            background: #00d4ff22;
+            border-left: 3px solid var(--neon-blue);
+            margin-left: auto;
+        }
+
+        .msg-robot {
+            align-self: flex-start;
+            background: #00ff4111;
+            border-left: 3px solid var(--neon-green);
+        }
+
+        .input-area {
+            display: flex;
+            gap: 10px;
+        }
+
+        input {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            color: #fff;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        input:focus {
+            border-color: var(--neon-green);
+            box-shadow: 0 0 15px #00ff4144;
+        }
+
+        button {
+            background: var(--neon-green);
+            color: #000;
+            border: none;
+            padding: 0 25px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background: #00cc33;
+            transform: scale(1.05);
+        }
+
+        /* Right Panel: Robot Face Mockup/Status */
+        .robot-status {
+            text-align: center;
+        }
+
+        .face-preview {
+            width: 150px;
+            height: 150px;
+            background: #000;
+            margin: 20px auto;
+            border-radius: 10px;
+            border: 2px solid var(--neon-green);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .eye {
+            width: 30px;
+            height: 30px;
+            background: #fff;
+            border-radius: 5px;
+            margin: 10px;
+            box-shadow: 0 0 10px #fff;
+        }
+
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Panel Izquierdo: Estado -->
+        <div class="panel">
+            <h2>System Health</h2>
+            <div class="stat-item">
+                <div class="stat-label">Core Version</div>
+                <div class="stat-value">ESP32-V1.PRO</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Neural Engine</div>
+                <div class="stat-value">Gemini 1.5</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Connection</div>
+                <div class="stat-value" id="status-text">DISCONNECTED</div>
+            </div>
+        </div>
+
+        <!-- Panel Central: Chat -->
+        <div class="panel chat-main">
+            <h2>Command Interface</h2>
+            <div id="chat-logs">
+                <div class="message msg-robot">SISTEMA: Esperando órdenes desde el centro de mando...</div>
+            </div>
+            <div class="input-area">
+                <input type="text" id="user-input" placeholder="Transmite tu comando aqui..." autocomplete="off">
+                <button onclick="sendToFirebase()">SEND</button>
+            </div>
+        </div>
+
+        <!-- Panel Derecho: Robot Presence -->
+        <div class="panel">
+            <h2>Robot Presence</h2>
+            <div class="robot-status">
+                <div class="face-preview" id="face">
+                    <div class="eye"></div>
+                    <div class="eye"></div>
+                </div>
+                <p id="robot-state" style="color: var(--neon-green); font-size: 0.8rem; font-weight: bold;">[ STANDBY ]
+                </p>
+            </div>
+            <div style="margin-top: auto; font-size: 0.6rem; color: #555;">
+                &copy; CYBER-ESPY PRO v2.0 <br> Secure Cloud Connection Active
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURACIÓN DE FIREBASE (ACTUALIZADA) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyChZckB2_8_upJkVAXRby3nMa5lfmCgAjw",
+            authDomain: "wlaz-cyberspy.firebaseapp.com",
+            projectId: "wlaz-cyberspy",
+            storageBucket: "wlaz-cyberspy.firebasestorage.app",
+            messagingSenderId: "747713564809",
+            appId: "1:747713564809:web:d8f89f5b8edd816398f658",
+            databaseURL: "https://wlaz-cyberspy-default-rtdb.firebaseio.com/"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // Referencias
+        const chatRef = db.ref('robot/chat');
+        const statusRef = db.ref('robot/status');
+
+        function appendMsg(sender, text) {
+            const logs = document.getElementById('chat-logs');
+            const div = document.createElement('div');
+            div.className = `message msg-${sender}`;
+            div.innerText = text;
+            logs.appendChild(div);
+            logs.scrollTop = logs.scrollHeight;
+        }
+
+        function sendToFirebase() {
+            const input = document.getElementById('user-input');
+            const text = input.value;
+            if (!text) return;
+
+            appendMsg('user', text);
+            input.value = '';
+
+            // Guardar en Firebase para que el ESP32 lo lea
+            chatRef.set({
+                user_msg: text,
+                robot_resp: "...",
+                timestamp: Date.now()
+            });
+
+            document.getElementById('robot-state').innerText = "[ THINKING ]";
+        }
+
+        // Escuchar cambios del robot
+        chatRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data && data.robot_resp !== "...") {
+                appendMsg('robot', data.robot_resp);
+                document.getElementById('robot-state').innerText = "[ SPEAKING ]";
+                setTimeout(() => {
+                    document.getElementById('robot-state').innerText = "[ ONLINE ]";
+                }, 3000);
+            }
+        });
+
+        // Simular conexión
+        setTimeout(() => {
+            document.getElementById('status-text').innerText = "ENCRYPTED_AUTH";
+            document.getElementById('status-text').style.color = "var(--neon-green)";
+        }, 1500);
+
+        // Control Enter
+        document.getElementById('user-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') sendToFirebase();
+        });
+    </script>
+</body>
+
+</html>
