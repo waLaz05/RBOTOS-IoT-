@@ -200,6 +200,41 @@
             background: rgba(255, 255, 255, 0.1);
             border-radius: 10px;
         }
+
+        /* --- RESPONSIVE DESIGN (Mobile) --- */
+        @media (max-width: 850px) {
+            body {
+                height: auto;
+                overflow-y: auto;
+            }
+
+            .container {
+                display: flex;
+                flex-direction: column;
+                gap: 15px;
+                padding: 10px;
+            }
+
+            .chat-main {
+                order: -1;
+                /* Pone el chat primero en celulares */
+                min-height: 400px;
+            }
+
+            #chat-logs {
+                max-height: 50vh;
+            }
+
+            .face-preview {
+                width: 100px;
+                height: 100px;
+            }
+
+            .eye {
+                width: 20px;
+                height: 20px;
+            }
+        }
     </style>
 </head>
 
